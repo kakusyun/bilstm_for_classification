@@ -5,6 +5,7 @@ from keras.callbacks import ModelCheckpoint, EarlyStopping
 import os
 from helper import parser
 from network import vggnet
+from keras.preprocessing.image import ImageDataGenerator
 
 K.set_image_data_format('channels_last')
 K.set_learning_phase(1)
@@ -21,10 +22,18 @@ def model_path(dataset):
 
 def sample_preprocess(x):
     # x = x.reshape(x.shape[0], input_size, input_size, input_channel)
-    return x.astype('float32') / 255
+    x = x.astype('float32') / 255
+    return x
 
 
 def train(model, x_train, y_train, x_val, y_val):
+    datagen_train = ImageDataGenerator(rotation_range=30, width_shift_range=0.2,
+                                       height_shift_range=0.2, shear_range=0.2,
+                                       zoom_range=0.2, horizontal_flip=True)
+    train_generator = datagen_train.flow(x_train, y_train, batch_size=32)
+
+    # datagen_train.fit(x_train)
+
     # 编译模型
     model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
 
@@ -36,15 +45,18 @@ def train(model, x_train, y_train, x_val, y_val):
     callbacks_list = [CP, ES]
 
     # 训练模型
-    model.fit(x_train, y_train, batch_size=BATCH_SIZE, epochs=EPOCH,
-              callbacks=callbacks_list, validation_data=(x_val, y_val))
+    model.fit_generator(generator=train_generator,
+                        batch_size=BATCH_SIZE,
+                        epochs=EPOCH,
+                        callbacks=callbacks_list,
+                        validation_data=(x_val, y_val))
     return model
 
 
 def main():
     # 加载数据
     (x_train, y_train), (x_test, y_test) = cifar10.load_data()
-
+    # class_number = len(np.unique(y_train))
     # 数据预处理
     x_train = sample_preprocess(x_train)
     x_test = sample_preprocess(x_test)
@@ -69,7 +81,7 @@ if __name__ == '__main__':
 
     args = parser.define_parser()
 
-    BATCH_SIZE = 64
+    BATCH_SIZE = 512
     if args.bs:
         BATCH_SIZE = args.bs
 
@@ -78,7 +90,7 @@ if __name__ == '__main__':
         EPOCH = args.ep
 
     # 设置多少次不提升，就停止训练
-    Patience = 10
+    Patience = 50
     input_size = 32
     input_channel = 3
     class_number = 10
