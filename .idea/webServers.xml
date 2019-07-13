@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="f33e0895-aef5-474e-8eb3-befa277810ad" name="ecnu_gpu" url="http://59.78.197.77">
+        <fileTransfer host="59.78.197.77" port="22" rootFolder="/gpfs/home/guojun" accessType="SFTP">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+          <option name="port" value="22" />
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>
