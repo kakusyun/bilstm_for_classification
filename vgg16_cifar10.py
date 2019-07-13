@@ -46,10 +46,11 @@ def train(model, x_train, y_train, x_val, y_val):
 
     # 训练模型
     model.fit_generator(generator=train_generator,
-                        batch_size=BATCH_SIZE,
+                        steps_per_epoch=x_train.shape[0] // BATCH_SIZE,
                         epochs=EPOCH,
                         callbacks=callbacks_list,
-                        validation_data=(x_val, y_val))
+                        validation_data=(x_val, y_val),
+                        validation_steps=x_val.shape[0] // BATCH_SIZE)
     return model
 
 
@@ -97,3 +98,4 @@ if __name__ == '__main__':
     dataset = 'cifar-10'
     ModelFile = model_path(dataset)
     main()
+
