@@ -40,7 +40,7 @@ def train(model, x_train, y_train, x_val, y_val):
 
     # 设置模型按什么标准进行保存。比如：acc,loss
     CP = ModelCheckpoint(ModelFile, monitor='val_acc',
-                         verbose=1, save_best_only=False, mode='auto')
+                         verbose=1, save_best_only=True, mode='auto')
     # 设置如果性能不上升，停止学习
     ES = EarlyStopping(monitor='val_acc', patience=Patience)
     callbacks_list = [CP, ES]
