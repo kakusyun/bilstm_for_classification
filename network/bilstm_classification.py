@@ -61,7 +61,6 @@ def BiLSTM_Deep_Classification(input_shape, classes):
     x = Lambda(lambda x: K.permute_dimensions(x, (0, 2, 1, 3)), name='transpose_7')(x)
     x = TD_BiLSTM(x, output_size=classes, name='lstm_7', mode='sum')
     x = LayerNormalization()(x)
-
     x = Lambda(lambda x: K.permute_dimensions(x, (0, 2, 1, 3)), name='transpose_8')(x)
     x = TD_BiLSTM(x, output_size=classes, name='lstm_8', mode='sum')
     x = LayerNormalization()(x)
