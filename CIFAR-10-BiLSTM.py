@@ -73,7 +73,7 @@ batch_size = 32  # orig paper trained all networks with batch_size=128
 epochs = 200
 data_augmentation = True
 num_classes = 10
-down_sampling_ratio = 1 / 4
+down_sampling_ratio = 1 / 8
 
 # Subtracting pixel mean improves accuracy
 subtract_pixel_mean = True
