@@ -24,11 +24,11 @@ def add_new_last_layer(base_model, nb_classes, train_mode=0):
         x = Dense(nb_classes, activation='softmax', kernel_initializer='he_normal')(x)
     else:
         x = Lambda(lambda x: K.permute_dimensions(x, (0, 2, 1, 3)), name='transpose_1')(x)
-        x = TD_BiLSTM(x, output_size=512, name='lstm_1', mode='sum')
+        x = TD_BiLSTM(x, output_size=1024, name='lstm_1', mode='sum')
         x = LayerNormalization()(x)
 
         x = Lambda(lambda x: K.permute_dimensions(x, (0, 2, 1, 3)), name='transpose_2')(x)
-        x = TD_BiLSTM(x, output_size=512, name='lstm_2', mode='sum')
+        x = TD_BiLSTM(x, output_size=1024, name='lstm_2', mode='sum')
         x = LayerNormalization()(x)
 
         x = Lambda(lambda x: K.permute_dimensions(x, (0, 2, 1, 3)), name='transpose_3')(x)

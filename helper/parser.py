@@ -28,5 +28,11 @@ def define_parser():
                         help="Training Mode: 0 标准模式 1 GAP模式 2 BiLSTM模式",
                         type=int,
                         dest='tm')
+    parser.add_argument('--net',
+                        required=False,
+                        metavar='resnet50',
+                        help="Select a base model.",
+                        type=str,
+                        dest='net')
     args = parser.parse_args()
     return args
