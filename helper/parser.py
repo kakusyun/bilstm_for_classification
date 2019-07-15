@@ -22,5 +22,11 @@ def define_parser():
                         help="Epoch",
                         type=int,
                         dest='ep')
+    parser.add_argument('--tm',
+                        required=False,
+                        metavar=0,
+                        help="Training Mode: 0 标准模式 1 GAP模式 2 BiLSTM模式",
+                        type=int,
+                        dest='tm')
     args = parser.parse_args()
     return args
