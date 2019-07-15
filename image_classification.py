@@ -6,9 +6,9 @@ import os
 from helper import parser
 from network import top_layers
 from keras.preprocessing.image import ImageDataGenerator
-from keras_applications.vgg16 import VGG16
-from keras_applications.resnet_common import ResNet50
-from keras_applications.imagenet_utils import preprocess_input
+from keras.applications.vgg16 import VGG16
+from keras.applications.resnet50 import ResNet50
+from keras.applications.imagenet_utils import preprocess_input
 from keras.optimizers import Adagrad
 import numpy as np
 from tqdm import tqdm
@@ -27,7 +27,7 @@ def out_model(dataset):
 
 
 def get_down_sampling(network):
-    if network == 'vgg16':
+    if network == 'vgg16' or network == 'resnet50':
         return 1 / 32
     else:
         return 1 / 32
@@ -51,7 +51,7 @@ def get_model(train_model):
     elif network == 'resnet50':
         weights_path = './model/resnet50_weights_tf_dim_ordering_tf_kernels_notop.h5'
         base_model = ResNet50(include_top=False, weights=weights_path,
-                           input_shape=(input_size, input_size, input_channel))
+                              input_shape=(input_size, input_size, input_channel))
     else:
         base_model = None
         print('Please select a base model.')
@@ -95,10 +95,11 @@ def train(model, base_model, x_train, y_train, x_val, y_val):
                                        rotation_range=30, width_shift_range=0.2,
                                        height_shift_range=0.2, shear_range=0.2,
                                        zoom_range=0.2, horizontal_flip=True)
+    train_datagen.fit(x_train)
+    train_generator = train_datagen.flow(x_train, y_train, batch_size=BATCH_SIZE)
+
     val_datagen = ImageDataGenerator(preprocessing_function=preprocess_input)
-    train_generator = train_datagen.flow(x_train, y_train, batch_size=32)
-    val_generator = val_datagen.flow(x_val, y_val, batch_size=32)
-    # datagen_train.fit(x_train)
+    val_generator = val_datagen.flow(x_val, y_val, batch_size=BATCH_SIZE)
 
     # 编译模型
     # model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
@@ -195,13 +196,16 @@ if __name__ == '__main__':
     if args.tm:
         train_model = args.tm
 
+    network = 'resnet50'
+    if args.net:
+        network = args.net
+
     # 设置多少次不提升，就停止训练
     Patience = 50
     input_size = 32
     input_channel = 3
     class_number = 10
     dataset = 'cifar-10'
-    network = 'vgg16'
     ModelFile = out_model(dataset)
 
     main()
