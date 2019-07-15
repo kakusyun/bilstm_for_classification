@@ -71,6 +71,54 @@ def BiLSTM_Deep_Classification(input_shape, classes):
     return model
 
 
+def BiLSTM_Deep_V_0_1(input_shape, classes):
+    inputs = Input(shape=input_shape)
+
+    x = Lambda(lambda x: K.permute_dimensions(x, (0, 2, 1, 3)), name='transpose_1')(inputs)
+    x = TD_BiLSTM(x, output_size=32, name='lstm_1', mode='sum')
+    x = LayerNormalization()(x)
+    x = Lambda(lambda x: K.permute_dimensions(x, (0, 2, 1, 3)), name='transpose_2')(x)
+    x = TD_BiLSTM(x, output_size=32, name='lstm_2', mode='sum')
+    x = LayerNormalization()(x)
+    x = MaxPooling2D(pool_size=(2, 2), strides=(2, 2))(x)
+
+    x = Lambda(lambda x: K.permute_dimensions(x, (0, 2, 1, 3)), name='transpose_3')(x)
+    x = TD_BiLSTM(x, output_size=64, name='lstm_3', mode='sum')
+    x = LayerNormalization()(x)
+    x = Lambda(lambda x: K.permute_dimensions(x, (0, 2, 1, 3)), name='transpose_4')(x)
+    x = TD_BiLSTM(x, output_size=64, name='lstm_4', mode='sum')
+    x = LayerNormalization()(x)
+    x = MaxPooling2D(pool_size=(2, 2), strides=(2, 2))(x)
+
+    x = Lambda(lambda x: K.permute_dimensions(x, (0, 2, 1, 3)), name='transpose_5')(x)
+    x = TD_BiLSTM(x, output_size=128, name='lstm_5', mode='sum')
+    x = LayerNormalization()(x)
+    x = Lambda(lambda x: K.permute_dimensions(x, (0, 2, 1, 3)), name='transpose_6')(x)
+    x = TD_BiLSTM(x, output_size=128, name='lstm_6', mode='sum')
+    x = LayerNormalization()(x)
+    x = MaxPooling2D(pool_size=(2, 2), strides=(2, 2))(x)
+
+    x = Lambda(lambda x: K.permute_dimensions(x, (0, 2, 1, 3)), name='transpose_7')(x)
+    x = TD_BiLSTM(x, output_size=256, name='lstm_7', mode='sum')
+    x = LayerNormalization()(x)
+    x = Lambda(lambda x: K.permute_dimensions(x, (0, 2, 1, 3)), name='transpose_8')(x)
+    x = TD_BiLSTM(x, output_size=256, name='lstm_8', mode='sum')
+    x = LayerNormalization()(x)
+    x = MaxPooling2D(pool_size=(2, 2), strides=(2, 2))(x)
+
+    x = Lambda(lambda x: K.permute_dimensions(x, (0, 2, 1, 3)), name='transpose_9')(x)
+    x = TD_BiLSTM(x, output_size=classes, name='lstm_9', mode='sum')
+    x = LayerNormalization()(x)
+    x = Lambda(lambda x: K.permute_dimensions(x, (0, 2, 1, 3)), name='transpose_10')(x)
+    x = TD_BiLSTM(x, output_size=classes, name='lstm_10', mode='sum')
+    x = LayerNormalization()(x)
+
+    x = Activation('softmax', name='classification_out')(x)
+    model = Model(inputs=inputs, outputs=x)
+    model.summary()
+    return model
+
+
 def BiLSTM_Single_Classification(input_shape, classes):
     inputs = Input(shape=input_shape)
 
