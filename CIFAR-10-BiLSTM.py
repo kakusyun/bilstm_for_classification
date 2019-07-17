@@ -14,6 +14,15 @@ import numpy as np
 import os
 from network.bilstm_classification import BiLSTM_Sequential_Classification
 from network.bilstm_classification import BiLSTM_Deep_Classification
+from network.bilstm_classification import BiLSTM_Deep_V_0_1
+from network.bilstm_classification import BiLSTM_Deep_V_0_2
+from network.bilstm_classification import BiLSTM_Deep_V_0_3
+from network.bilstm_classification import BiLSTM_Deep_V_0_4
+from network.bilstm_classification import BiLSTM_Deep_V_0_5
+from helper.parser import define_parser
+
+from tqdm import tqdm
+from helper import handle_model as hm
 
 
 def label_preprocess(label, down_sampling):
@@ -50,14 +59,15 @@ def lr_schedule(epoch):
     return lr
 
 
-def test(model, x_test, y_test):
-    test_number = y_test.shape[0]
+def test(model, x_test, y_test, down_sampling):
     y_pred = model.predict(x_test)
 
-    y = np.empty((test_number, input_size, input_size, 1)).astype('int32')
+    test_number = y_test.shape[0]
+    output_size = int(input_size * down_sampling)
+    y = np.empty((test_number, output_size, output_size, 1)).astype('int32')
     # y_final = np.full_like(y_test, 0)
     count = 0
-    for num in range(test_number):
+    for num in tqdm(range(test_number)):
         for i in range(y_pred.shape[1]):
             for j in range(y_pred.shape[2]):
                 pred_cls = y_pred[num, i, j, :].tolist()
@@ -68,175 +78,168 @@ def test(model, x_test, y_test):
     return count / test_number
 
 
-# Training parameters
-batch_size = 32  # orig paper trained all networks with batch_size=128
-epochs = 200
-data_augmentation = True
-num_classes = 10
-down_sampling_ratio = 1 / 8
+def main():
+    # Load the CIFAR10 data.
+    (x_train, y_train), (x_test, y_test) = cifar10.load_data()
 
-# Subtracting pixel mean improves accuracy
-subtract_pixel_mean = True
+    # Input image dimensions.
+    input_shape = x_train.shape[1:]
 
-# Model parameter
-# ----------------------------------------------------------------------------
-#           |      | 200-epoch | Orig Paper| 200-epoch | Orig Paper| sec/epoch
-# Model     |  n   | ResNet v1 | ResNet v1 | ResNet v2 | ResNet v2 | GTX1080Ti
-#           |v1(v2)| %Accuracy | %Accuracy | %Accuracy | %Accuracy | v1 (v2)
-# ----------------------------------------------------------------------------
-# ResNet20  | 3 (2)| 92.16     | 91.25     | -----     | -----     | 35 (---)
-# ResNet32  | 5(NA)| 92.46     | 92.49     | NA        | NA        | 50 ( NA)
-# ResNet44  | 7(NA)| 92.50     | 92.83     | NA        | NA        | 70 ( NA)
-# ResNet56  | 9 (6)| 92.71     | 93.03     | 93.01     | NA        | 90 (100)
-# ResNet110 |18(12)| 92.65     | 93.39+-.16| 93.15     | 93.63     | 165(180)
-# ResNet164 |27(18)| -----     | 94.07     | -----     | 94.54     | ---(---)
-# ResNet1001| (111)| -----     | 92.39     | -----     | 95.08+-.14| ---(---)
-# ---------------------------------------------------------------------------
-# n = 3
+    # Normalize data.
+    x_train = x_train.astype('float32') / 255
+    x_test = x_test.astype('float32') / 255
 
-# Model version
-# Orig paper: version = 1 (ResNet v1), Improved ResNet: version = 2 (ResNet v2)
-# version = 1
+    # If subtract pixel mean is enabled
+    if subtract_pixel_mean:
+        x_train_mean = np.mean(x_train, axis=0)
+        x_train -= x_train_mean
+        x_test -= x_train_mean
 
-# Computed depth from supplied model parameter n
-# if version == 1:
-#     depth = n * 6 + 2
-# elif version == 2:
-#     depth = n * 9 + 2
+    print('x_train shape:', x_train.shape)
+    print(x_train.shape[0], 'train samples')
+    print(x_test.shape[0], 'test samples')
+    print('y_train shape:', y_train.shape)
 
-# Model name, depth and version
-model_type = 'BiLSTM'
+    # Convert class vectors to binary class matrices.
+    # y_train = keras.utils.to_categorical(y_train, num_classes)
+    # y_test = keras.utils.to_categorical(y_test, num_classes)
+    y_train_sequence = label_preprocess(y_train, down_sampling_ratio)
+    y_test_sequence = label_preprocess(y_test, down_sampling_ratio)
 
-# Load the CIFAR10 data.
-(x_train, y_train), (x_test, y_test) = cifar10.load_data()
+    # model = BiLSTM_Sequential_Classification(input_shape=input_shape, classes=num_classes)
+    # model = BiLSTM_Deep_Classification(input_shape=input_shape, classes=num_classes)
+    # model = BiLSTM_Deep_V_0_1(input_shape=input_shape, classes=num_classes)
+    # model = BiLSTM_Deep_V_0_2(input_shape=input_shape, classes=num_classes)
+    # model = BiLSTM_Deep_V_0_3(input_shape=input_shape, classes=num_classes)
+    model = BiLSTM_Deep_V_0_5(input_shape=input_shape, classes=num_classes)
 
-# Input image dimensions.
-input_shape = x_train.shape[1:]
-input_size = input_shape[0]
-# Normalize data.
-x_train = x_train.astype('float32') / 255
-x_test = x_test.astype('float32') / 255
+    #
+    # if version == 2:
+    #     model = resnet_v2(input_shape=input_shape, depth=depth)
+    # else:
+    #     model = resnet_v1(input_shape=input_shape, depth=depth)
 
-# If subtract pixel mean is enabled
-if subtract_pixel_mean:
-    x_train_mean = np.mean(x_train, axis=0)
-    x_train -= x_train_mean
-    x_test -= x_train_mean
+    model.compile(loss='categorical_crossentropy',
+                  optimizer=Adam(lr=lr_schedule(0)),
+                  metrics=['accuracy'])
+    model.summary()
+    print(model_type)
 
-print('x_train shape:', x_train.shape)
-print(x_train.shape[0], 'train samples')
-print(x_test.shape[0], 'test samples')
-print('y_train shape:', y_train.shape)
+    # Prepare model model saving directory.
+    save_dir = os.path.join(os.getcwd(), 'saved_models')
+    model_name = 'cifar10-%s-{epoch:03d}-{val_acc:.5f}-{val_loss:.5f}.h5' % model_type
+    if not os.path.isdir(save_dir):
+        os.makedirs(save_dir)
+    filepath = os.path.join(save_dir, model_name)
 
-# Convert class vectors to binary class matrices.
-# y_train = keras.utils.to_categorical(y_train, num_classes)
-# y_test = keras.utils.to_categorical(y_test, num_classes)
-y_train_sequence = label_preprocess(y_train, down_sampling_ratio)
-y_test_sequence = label_preprocess(y_test, down_sampling_ratio)
+    # Prepare callbacks for model saving and for learning rate adjustment.
+    checkpoint = ModelCheckpoint(filepath=filepath,
+                                 monitor='val_acc',
+                                 verbose=1,
+                                 save_best_only=True)
 
-# model = BiLSTM_Sequential_Classification(input_shape=input_shape, classes=num_classes)
-model = BiLSTM_Deep_Classification(input_shape=input_shape, classes=num_classes)
-#
-# if version == 2:
-#     model = resnet_v2(input_shape=input_shape, depth=depth)
-# else:
-#     model = resnet_v1(input_shape=input_shape, depth=depth)
+    lr_scheduler = LearningRateScheduler(lr_schedule)
 
-model.compile(loss='categorical_crossentropy',
-              optimizer=Adam(lr=lr_schedule(0)),
-              metrics=['accuracy'])
-model.summary()
-print(model_type)
+    lr_reducer = ReduceLROnPlateau(factor=np.sqrt(0.1),
+                                   cooldown=0,
+                                   patience=5,
+                                   min_lr=0.5e-6)
 
-# Prepare model model saving directory.
-save_dir = os.path.join(os.getcwd(), 'saved_models')
-model_name = 'cifar10_%s_model.{epoch:03d}.h5' % model_type
-if not os.path.isdir(save_dir):
-    os.makedirs(save_dir)
-filepath = os.path.join(save_dir, model_name)
+    callbacks = [checkpoint, lr_reducer, lr_scheduler]
 
-# Prepare callbacks for model saving and for learning rate adjustment.
-checkpoint = ModelCheckpoint(filepath=filepath,
-                             monitor='val_acc',
-                             verbose=1,
-                             save_best_only=True)
+    # Run training, with or without data augmentation.
+    if not data_augmentation:
+        print('Not using data augmentation.')
+        model.fit(x_train, y_train_sequence,
+                  batch_size=batch_size,
+                  epochs=epochs,
+                  validation_data=(x_test, y_test_sequence),
+                  shuffle=True,
+                  callbacks=callbacks)
+    else:
+        print('Using real-time data augmentation.')
+        # This will do preprocessing and realtime data augmentation:
+        datagen = ImageDataGenerator(
+            # set input mean to 0 over the dataset
+            featurewise_center=False,
+            # set each sample mean to 0
+            samplewise_center=False,
+            # divide inputs by std of dataset
+            featurewise_std_normalization=False,
+            # divide each input by its std
+            samplewise_std_normalization=False,
+            # apply ZCA whitening
+            zca_whitening=False,
+            # epsilon for ZCA whitening
+            zca_epsilon=1e-06,
+            # randomly rotate images in the range (deg 0 to 180)
+            rotation_range=0,
+            # randomly shift images horizontally
+            width_shift_range=0.1,
+            # randomly shift images vertically
+            height_shift_range=0.1,
+            # set range for random shear
+            shear_range=0.,
+            # set range for random zoom
+            zoom_range=0.,
+            # set range for random channel shifts
+            channel_shift_range=0.,
+            # set mode for filling points outside the input boundaries
+            fill_mode='nearest',
+            # value used for fill_mode = "constant"
+            cval=0.,
+            # randomly flip images
+            horizontal_flip=True,
+            # randomly flip images
+            vertical_flip=False,
+            # set rescaling factor (applied before any other transformation)
+            rescale=None,
+            # set function that will be applied on each input
+            preprocessing_function=None,
+            # image data format, either "channels_first" or "channels_last"
+            data_format=None,
+            # fraction of images reserved for validation (strictly between 0 and 1)
+            validation_split=0.0)
 
-lr_scheduler = LearningRateScheduler(lr_schedule)
+        # Compute quantities required for featurewise normalization
+        # (std, mean, and principal components if ZCA whitening is applied).
+        datagen.fit(x_train)
 
-lr_reducer = ReduceLROnPlateau(factor=np.sqrt(0.1),
-                               cooldown=0,
-                               patience=5,
-                               min_lr=0.5e-6)
+        # Fit the model on the batches generated by datagen.flow().
+        model.fit_generator(datagen.flow(x_train, y_train_sequence, batch_size=batch_size),
+                            validation_data=(x_test, y_test_sequence),
+                            epochs=epochs, verbose=1, workers=4,
+                            callbacks=callbacks)
 
-callbacks = [checkpoint, lr_reducer, lr_scheduler]
+    # Score trained model.
+    # scores = model.evaluate(x_test, y_test, verbose=1)
+    acc = test(model, x_test, y_test, down_sampling_ratio)
 
-# Run training, with or without data augmentation.
-if not data_augmentation:
-    print('Not using data augmentation.')
-    model.fit(x_train, y_train_sequence,
-              batch_size=batch_size,
-              epochs=epochs,
-              validation_data=(x_test, y_test_sequence),
-              shuffle=True,
-              callbacks=callbacks)
-else:
-    print('Using real-time data augmentation.')
-    # This will do preprocessing and realtime data augmentation:
-    datagen = ImageDataGenerator(
-        # set input mean to 0 over the dataset
-        featurewise_center=False,
-        # set each sample mean to 0
-        samplewise_center=False,
-        # divide inputs by std of dataset
-        featurewise_std_normalization=False,
-        # divide each input by its std
-        samplewise_std_normalization=False,
-        # apply ZCA whitening
-        zca_whitening=False,
-        # epsilon for ZCA whitening
-        zca_epsilon=1e-06,
-        # randomly rotate images in the range (deg 0 to 180)
-        rotation_range=0,
-        # randomly shift images horizontally
-        width_shift_range=0.1,
-        # randomly shift images vertically
-        height_shift_range=0.1,
-        # set range for random shear
-        shear_range=0.,
-        # set range for random zoom
-        zoom_range=0.,
-        # set range for random channel shifts
-        channel_shift_range=0.,
-        # set mode for filling points outside the input boundaries
-        fill_mode='nearest',
-        # value used for fill_mode = "constant"
-        cval=0.,
-        # randomly flip images
-        horizontal_flip=True,
-        # randomly flip images
-        vertical_flip=False,
-        # set rescaling factor (applied before any other transformation)
-        rescale=None,
-        # set function that will be applied on each input
-        preprocessing_function=None,
-        # image data format, either "channels_first" or "channels_last"
-        data_format=None,
-        # fraction of images reserved for validation (strictly between 0 and 1)
-        validation_split=0.0)
+    # print('Test loss:', scores[0])
+    print('Test accuracy:', acc)
 
-    # Compute quantities required for featurewise normalization
-    # (std, mean, and principal components if ZCA whitening is applied).
-    datagen.fit(x_train)
 
-    # Fit the model on the batches generated by datagen.flow().
-    model.fit_generator(datagen.flow(x_train, y_train_sequence, batch_size=batch_size),
-                        validation_data=(x_test, y_test_sequence),
-                        epochs=epochs, verbose=1, workers=4,
-                        callbacks=callbacks)
+if __name__ == '__main__':
 
-# Score trained model.
-# scores = model.evaluate(x_test, y_test, verbose=1)
-acc = test(model, x_test, y_test)
+    args = define_parser()
 
-# print('Test loss:', scores[0])
-print('Test accuracy:', acc)
+    batch_size = 512
+    if args.bs:
+        batch_size = args.bs
+
+    epochs = 300
+    if args.ep:
+        epochs = args.ep
+
+    # Training parameters
+    data_augmentation = True
+    num_classes = 10
+    down_sampling_ratio = 1 / 4  # Todo: Important
+    input_size = 32
+    # Subtracting pixel mean improves accuracy
+    subtract_pixel_mean = True
+
+    # Model name, depth and version
+    model_type = 'BiLSTM_Deep_V_0_5'  # Todo: Important
+
+    main()
