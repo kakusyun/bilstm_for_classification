@@ -19,8 +19,10 @@ from network.bilstm_classification import BiLSTM_Deep_V_0_2
 from network.bilstm_classification import BiLSTM_Deep_V_0_3
 from network.bilstm_classification import BiLSTM_Deep_V_0_4
 from network.bilstm_classification import BiLSTM_Deep_V_0_5
-from helper.parser import define_parser
+from network.bilstm_classification import BiLSTM_Deep_V_0_6
 
+from helper.parser import define_parser
+from keras.applications.densenet import DenseNet121
 from tqdm import tqdm
 from helper import handle_model as hm
 
@@ -111,7 +113,7 @@ def main():
     # model = BiLSTM_Deep_V_0_1(input_shape=input_shape, classes=num_classes)
     # model = BiLSTM_Deep_V_0_2(input_shape=input_shape, classes=num_classes)
     # model = BiLSTM_Deep_V_0_3(input_shape=input_shape, classes=num_classes)
-    model = BiLSTM_Deep_V_0_5(input_shape=input_shape, classes=num_classes)
+    model = BiLSTM_Deep_V_0_6(input_shape=input_shape, classes=num_classes)
 
     #
     # if version == 2:
@@ -240,6 +242,6 @@ if __name__ == '__main__':
     subtract_pixel_mean = True
 
     # Model name, depth and version
-    model_type = 'BiLSTM_Deep_V_0_5'  # Todo: Important
+    model_type = 'BiLSTM_Deep_V_0_6'  # Todo: Important
 
     main()
