@@ -29,11 +29,14 @@ from helper import handle_model as hm
 
 def label_preprocess(label, down_sampling):
     output_size = int(input_size * down_sampling)
-    y = np.empty((label.shape[0], output_size, output_size, 1))
-    for i in range(label.shape[0]):
-        y[i] = label[i]
-        # print(y[i])
-    return keras.utils.to_categorical(y, num_classes)
+    if output_size == 1:
+        return keras.utils.to_categorical(label, num_classes)
+    else:
+        y = np.empty((label.shape[0], output_size, output_size, 1))
+        for i in range(label.shape[0]):
+            y[i] = label[i]
+            # print(y[i])
+        return keras.utils.to_categorical(y, num_classes)
 
 
 def lr_schedule(epoch):
@@ -214,11 +217,14 @@ def main():
                             callbacks=callbacks)
 
     # Score trained model.
-    # scores = model.evaluate(x_test, y_test, verbose=1)
-    acc = test(model, x_test, y_test, down_sampling_ratio)
 
-    # print('Test loss:', scores[0])
-    print('Test accuracy:', acc)
+    if out_sequence:
+        acc = test(model, x_test, y_test, down_sampling_ratio)
+        print('Test accuracy:', acc)
+    else:
+        scores = model.evaluate(x_test, y_test, verbose=1)
+        print('Test loss:', scores[0])
+        print('Test accuracy:', scores[1])
 
 
 if __name__ == '__main__':
@@ -233,10 +239,19 @@ if __name__ == '__main__':
     if args.ep:
         epochs = args.ep
 
+    out_sequence = True
+    if args.seq:
+        out_sequence = args.seq
+
     # Training parameters
     data_augmentation = True
     num_classes = 10
-    down_sampling_ratio = 1 / 4  # Todo: Important
+
+    if out_sequence:
+        down_sampling_ratio = 1 / 4  # Todo: Important
+    else:
+        down_sampling_ratio = 1 / 32
+
     input_size = 32
     # Subtracting pixel mean improves accuracy
     subtract_pixel_mean = True
