@@ -1,9 +1,13 @@
-from keras.layers import Input, Lambda, Activation, MaxPooling2D, Conv2D, Add, BatchNormalization, Concatenate
+from keras.layers import Input, Lambda, Activation, MaxPooling2D, GlobalAveragePooling2D
+from keras.layers import Conv2D, Add, BatchNormalization, Concatenate, Dense
 from keras.models import Model
 import keras.backend as K
 from .rnn import TimeDistributed_CuDNNLSTM as TD_BiLSTM
 from .rnn import Bidirectional_CuDNNLSTM as BiLSTM
 from keras_layer_normalization import LayerNormalization
+from .rnn import Bidirectional_CuDNNLSTM as BiLSTM
+from .rnn import TimeDistributed_ConvLSTM as TD_ConvLSTM
+from .rnn import TimeDistributed_CuDNNGRU as TD_GRU
 
 
 def BiLSTM_Single_Classification(input_shape, classes):
@@ -318,10 +322,10 @@ def BiLSTM_Deep_V_0_5(input_shape, classes):
 
 def BiLSTM_Transpose_Layers(x, channels, name, mode='concat'):
     x = Lambda(lambda x: K.permute_dimensions(x, (0, 2, 1, 3)), name=name + 'tran_1')(x)
-    x = TD_BiLSTM(x, output_size=channels, name=name + 'lstm_1', mode=mode)
+    x = TD_GRU(x, output_size=channels, name=name + 'lstm_1', mode=mode)
     x = LayerNormalization()(x)
     x = Lambda(lambda x: K.permute_dimensions(x, (0, 2, 1, 3)), name=name + 'tran_2')(x)
-    x = TD_BiLSTM(x, output_size=channels, name=name + 'lstm_2', mode=mode)
+    x = TD_GRU(x, output_size=channels, name=name + 'lstm_2', mode=mode)
     x = LayerNormalization()(x)
     return x
 
@@ -340,13 +344,16 @@ def BiLSTM_Deep_V_0_6(input_shape, classes, num_block=2, repeat=1):
 
     for i in range(num_block):
         for j in range(repeat):
-            x = BiLSTM_Dense_Block(x, channels=16 * (i + 1),
-                                   name='Block_' + str(i * repeat + j + 1) + '_',
-                                   num_sub_block=3)
+            x = BiLSTM_Dense_Block(x, channels=32 * (i + 1), name='Block_' + str(i * repeat + j + 1) + '_')
         x = MaxPooling2D(pool_size=(2, 2), strides=(2, 2), name='Pool_' + str(i + 1))(x)
-
-    x = BiLSTM_Transpose_Layers(x, channels=classes, name='output_', mode='sum')
-
-    x = Activation('softmax', name='classification_out')(x)
+    sequence = True
+    if sequence:
+        x = BiLSTM_Transpose_Layers(x, channels=classes, name='output_', mode='sum')
+        x = Activation('softmax', name='classification_out')(x)
+    else:
+        x = GlobalAveragePooling2D()(x)
+        x = Dense(classes,
+                  activation='softmax',
+                  kernel_initializer='he_normal')(x)
     model = Model(inputs=inputs, outputs=x)
     return model
